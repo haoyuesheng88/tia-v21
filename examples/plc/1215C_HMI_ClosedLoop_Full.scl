@@ -1,0 +1,28 @@
+FUNCTION "FC_HMI_CLOSED_LOOP" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+    IF %M10.0 THEN
+        %M10.2 := TRUE;
+    END_IF;
+
+    IF %M10.1 THEN
+        %M10.2 := FALSE;
+    END_IF;
+
+    %Q0.0 := %M10.2;
+    %M10.3 := %Q0.0;
+    %MW22 := %MW20;
+
+    IF %M10.0 OR %M10.1 THEN
+        %M10.0 := FALSE;
+        %M10.1 := FALSE;
+    END_IF;
+END_FUNCTION
+
+ORGANIZATION_BLOCK "Main"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+    "FC_HMI_CLOSED_LOOP"();
+END_ORGANIZATION_BLOCK

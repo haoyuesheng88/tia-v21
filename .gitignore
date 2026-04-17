@@ -1,0 +1,11 @@
+bin/
+obj/
+*.user
+*.suo
+*.log
+*.tmp
+*.bak
+*.png
+*.exe
+*.dll
+*.pdb

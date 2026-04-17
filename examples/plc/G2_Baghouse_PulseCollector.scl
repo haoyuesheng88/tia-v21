@@ -1,0 +1,157 @@
+FUNCTION_BLOCK "FB_BAGHOUSE_PULSE"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+
+VAR_INPUT
+    StartCmd : Bool;
+    StopCmd : Bool;
+    DiffPressHigh : Bool;
+    PulseFeedback : Bool;
+    PulseInterval : Time;
+    PulseWidth : Time;
+END_VAR
+
+VAR_OUTPUT
+    FanRun : Bool;
+    Valve1 : Bool;
+    Valve2 : Bool;
+    Valve3 : Bool;
+    Valve4 : Bool;
+    Alarm : Bool;
+    CycleStep : Int;
+END_VAR
+
+VAR
+    RunLatch : Bool;
+    AlarmLatch : Bool;
+    Step : Int;
+    IntervalEnable : Bool;
+    PulseEnable : Bool;
+    T_Interval : TON;
+    T_Pulse : TON;
+END_VAR
+
+BEGIN
+    IF StopCmd THEN
+        RunLatch := FALSE;
+        AlarmLatch := FALSE;
+    END_IF;
+
+    IF StartCmd THEN
+        RunLatch := TRUE;
+    END_IF;
+
+    FanRun := RunLatch;
+
+    Valve1 := FALSE;
+    Valve2 := FALSE;
+    Valve3 := FALSE;
+    Valve4 := FALSE;
+    IntervalEnable := FALSE;
+    PulseEnable := FALSE;
+
+    IF NOT RunLatch THEN
+        Step := 0;
+    ELSIF NOT DiffPressHigh THEN
+        Step := 10;
+    ELSE
+        CASE Step OF
+            0:
+                Step := 10;
+            10:
+                IntervalEnable := TRUE;
+                IF T_Interval.Q THEN
+                    Step := 11;
+                END_IF;
+            11:
+                Valve1 := TRUE;
+                PulseEnable := TRUE;
+                IF T_Pulse.Q THEN
+                    IF NOT PulseFeedback THEN
+                        AlarmLatch := TRUE;
+                    END_IF;
+                    Step := 20;
+                END_IF;
+            20:
+                IntervalEnable := TRUE;
+                IF T_Interval.Q THEN
+                    Step := 21;
+                END_IF;
+            21:
+                Valve2 := TRUE;
+                PulseEnable := TRUE;
+                IF T_Pulse.Q THEN
+                    IF NOT PulseFeedback THEN
+                        AlarmLatch := TRUE;
+                    END_IF;
+                    Step := 30;
+                END_IF;
+            30:
+                IntervalEnable := TRUE;
+                IF T_Interval.Q THEN
+                    Step := 31;
+                END_IF;
+            31:
+                Valve3 := TRUE;
+                PulseEnable := TRUE;
+                IF T_Pulse.Q THEN
+                    IF NOT PulseFeedback THEN
+                        AlarmLatch := TRUE;
+                    END_IF;
+                    Step := 40;
+                END_IF;
+            40:
+                IntervalEnable := TRUE;
+                IF T_Interval.Q THEN
+                    Step := 41;
+                END_IF;
+            41:
+                Valve4 := TRUE;
+                PulseEnable := TRUE;
+                IF T_Pulse.Q THEN
+                    IF NOT PulseFeedback THEN
+                        AlarmLatch := TRUE;
+                    END_IF;
+                    Step := 10;
+                END_IF;
+            ELSE
+                Step := 10;
+        END_CASE;
+    END_IF;
+
+    T_Interval(IN := IntervalEnable, PT := PulseInterval);
+    T_Pulse(IN := PulseEnable, PT := PulseWidth);
+
+    Alarm := AlarmLatch;
+    CycleStep := Step;
+END_FUNCTION_BLOCK
+
+DATA_BLOCK "DB_BAGHOUSE_PULSE"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+"FB_BAGHOUSE_PULSE"
+BEGIN
+END_DATA_BLOCK
+
+ORGANIZATION_BLOCK "Main"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_TEMP
+END_VAR
+BEGIN
+    "DB_BAGHOUSE_PULSE"(
+        StartCmd := %I0.0,
+        StopCmd := %I0.1,
+        DiffPressHigh := %I0.2,
+        PulseFeedback := %I0.3,
+        PulseInterval := T#8s,
+        PulseWidth := T#300ms,
+        FanRun => %Q0.0,
+        Valve1 => %Q0.1,
+        Valve2 => %Q0.2,
+        Valve3 => %Q0.3,
+        Valve4 => %Q0.4,
+        Alarm => %Q0.5,
+        CycleStep => %MW10);
+END_ORGANIZATION_BLOCK
